@@ -1,31 +1,29 @@
+const std = @import("std");
+
+extern fn js_print(str_ptr: [*]const u8, str_len: u32) void;
+
+pub fn print(gpa: std.mem.Allocator, fmt: []const u8, args: anytype) void {
+    // TODO printing is expensive as SHIT
+    // consider replacing with a stack allocated bufPrint or heap
+    const str = std.fmt.allocPrint(gpa, fmt, args) catch return;
+    defer gpa.free(str);
+    js_print(str.ptr, str.len);
+}
+
 pub const KeyCode = enum(u8) {
     none = 0,
     backspace = 8,
     tab = 9,
     enter = 13,
-    shift_left = 16,
-    shift_right = 16,
-    ctrl_left = 17,
-    ctrl_right = 17,
-    alt_left = 18,
-    alt_right = 18,
+    shift = 16,
+    ctrl = 17,
+    alt = 18,
     pause = 19,
     caps_lock = 20,
     escape = 27,
     space = 32,
-    page_up = 33,
-    page_down = 34,
-    end = 35,
-    home = 36,
-    arrow_left = 37,
-    arrow_up = 38,
-    arrow_right = 39,
-    arrow_down = 40,
-    insert = 45,
-    comma = 44,
-    minus = 45,
-    period = 46,
-    slash = 47,
+
+    // ASCII Digits
     key_0 = 48,
     key_1 = 49,
     key_2 = 50,
@@ -36,70 +34,80 @@ pub const KeyCode = enum(u8) {
     key_7 = 55,
     key_8 = 56,
     key_9 = 57,
+
+    // ASCII Symbols
+    quote = 39,
+    comma = 44,
+    minus = 45,
+    period = 46,
+    slash = 47,
     semicolon = 59,
     equal = 61,
-    key_a = 65,
-    key_b = 66,
-    key_c = 67,
-    key_d = 68,
-    key_e = 69,
-    key_f = 70,
-    key_g = 71,
-    key_h = 72,
-    key_i = 73,
-    key_j = 74,
-    key_k = 75,
-    key_l = 76,
-    key_m = 77,
-    key_n = 78,
-    key_o = 79,
-    key_p = 80,
-    key_q = 81,
-    key_r = 82,
-    key_s = 83,
-    key_t = 84,
-    key_u = 85,
-    key_v = 86,
-    key_w = 87,
-    key_x = 88,
-    key_y = 89,
-    key_z = 90,
     bracket_left = 91,
     backslash = 92,
     bracket_right = 93,
     backtick = 96,
-    numpad_0 = 96,
-    numpad_1 = 97,
-    numpad_2 = 98,
-    numpad_3 = 99,
-    numpad_4 = 100,
-    numpad_5 = 101,
-    numpad_6 = 102,
-    numpad_7 = 103,
-    numpad_8 = 104,
-    numpad_9 = 105,
-    multiply = 106,
-    add = 107,
-    subtract = 109,
-    decimal = 110,
-    divide = 111,
-    fn_1 = 112,
-    fn_2 = 113,
-    fn_3 = 114,
-    fn_4 = 115,
-    fn_5 = 116,
-    fn_6 = 117,
-    fn_7 = 118,
-    fn_8 = 119,
-    fn_9 = 120,
-    fn_10 = 121,
-    fn_11 = 122,
-    fn_12 = 123,
-    delete = 127,
-    quote = 39,
-    meta_left = 91,
-    meta_right = 92,
-    context_menu = 93,
+
+    // ASCII Letters
+    a = 65,
+    b = 66,
+    c = 67,
+    d = 68,
+    e = 69,
+    f = 70,
+    g = 71,
+    h = 72,
+    i = 73,
+    j = 74,
+    k = 75,
+    l = 76,
+    m = 77,
+    n = 78,
+    o = 79,
+    p = 80,
+    q = 81,
+    r = 82,
+    s = 83,
+    t = 84,
+    u = 85,
+    v = 86,
+    w = 87,
+    x = 88,
+    y = 89,
+    z = 90,
+
+    // Function Keys
+    f1 = 112,
+    f2 = 113,
+    f3 = 114,
+    f4 = 115,
+    f5 = 116,
+    f6 = 117,
+    f7 = 118,
+    f8 = 119,
+    f9 = 120,
+    f10 = 121,
+    f11 = 122,
+    f12 = 123,
+
+    // Non-ASCII Special Keys
+    delete = 127, // ASCII DEL
+    page_up = 138,
+    page_down = 139,
+    end = 140,
+    home = 141,
+    arrow_left = 142,
+    arrow_up = 143,
+    arrow_right = 144,
+    arrow_down = 145,
+    insert = 146,
+
+    // Misc
+    print_screen = 154,
+    scroll_lock = 155,
+    num_lock = 156,
+    super = 157, // Windows/Command key
+
     _,
 };
 
@@ -112,22 +120,42 @@ pub const MouseButton = enum(u8) {
     forward = 5,
 };
 
-const Keyboard = struct {
-    keys_down: [128]bool = [_]bool{false} ** 128,
-    keys_pressed: [128]bool = [_]bool{false} ** 128,
-    keys_released: [128]bool = [_]bool{false} ** 128,
+pub const Keyboard = struct {
+    keys_down: [256]bool = [_]bool{false} ** 256,
+    keys_pressed: [256]bool = [_]bool{false} ** 256,
+    keys_released: [256]bool = [_]bool{false} ** 256,
+
+    pub fn new() Keyboard {
+        return .{};
+    }
 
     pub fn keyDown(self: *Keyboard, key: KeyCode) void {
         const key_code = @intFromEnum(key);
         if (!self.keys_down[key_code]) {
             self.keys_pressed[key_code] = true;
         }
-        self.keys_down[key] = true;
+        self.keys_down[key_code] = true;
     }
     pub fn keyUp(self: *Keyboard, key: KeyCode) void {
         const key_code = @intFromEnum(key);
         self.keys_down[key_code] = false;
         self.keys_released[key_code] = true;
+    }
+
+    pub fn iskeyDown(self: *const Keyboard, key: KeyCode) bool {
+        return self.keys_down[@intFromEnum(key)];
+    }
+    pub fn isKeyPressed(self: *const Keyboard, key: KeyCode) bool {
+        return self.keys_pressed[@intFromEnum(key)];
+    }
+
+    pub fn isKeyReleased(self: *const Keyboard, key: KeyCode) bool {
+        return self.keys_released[@intFromEnum(key)];
+    }
+
+    pub fn endFrame(self: *Keyboard) void {
+        @memset(&self.keys_pressed, false);
+        @memset(&self.keys_released, false);
     }
 };
 
