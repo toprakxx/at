@@ -4,13 +4,22 @@ const ctx = canvas.getContext("2d");
 
 
 ///////////// start of zig interface
+let cachedImageData = null;
+let cachedPixelData = null;
+
 export function js_print(strPtr, keyLen) {
   const strArr = new Uint8Array(wasm.memory.buffer, strPtr, keyLen);
   const str = new TextDecoder().decode(strArr);
   console.log(str)
 }
 export function updateCanvas() {
-  ctx.putImageData(imageData, 0, 0);
+  const bufferPtr = wasm.canvas_getBuffer();
+  if (!cachedPixelData || cachedPixelData.buffer !== wasm.memory.buffer) {
+    cachedPixelData = new Uint8ClampedArray(wasm.memory.buffer, bufferPtr, canvas.width * canvas.height * 4);
+    cachedImageData = new ImageData(cachedPixelData, canvas.width, canvas.height);
+  }
+  
+  ctx.putImageData(cachedImageData, 0, 0);
 }
 
 ///////////// end of zig interface
@@ -18,16 +27,13 @@ export function updateCanvas() {
 
 
 let wasm = null;
-let imageData = null;
 
 
 function createCanvasImage() {
   canvas.width = wasm.canvas_getWidth();
   canvas.height = wasm.canvas_getHeight();
-
-  const bufferPtr = wasm.canvas_getBuffer();
-  const pixelData = new Uint8ClampedArray(wasm.memory.buffer, bufferPtr, canvas.width * canvas.height * 4);
-  imageData = new ImageData(pixelData, canvas.width, canvas.height);
+  cachedImageData = null;
+  cachedPixelData = null;
 }
 
 async function init() {
@@ -43,14 +49,15 @@ async function init() {
     }
   );
   wasm = instance.exports;
-  wasm.interface_init();
   createCanvasImage();
+  wasm.interface_init();
   wasm.canvas_clearBuffer();
   requestAnimationFrame(gameloop);
 }
 function gameloop() {
   wasm.update();
   updateCanvas();
+  requestAnimationFrame(gameloop);
 }
 
 
@@ -163,7 +170,7 @@ function setupKbInput() {
 
   });
   window.addEventListener("keyup", (e) => {
-    key = getKbKeyVal(e.code);
+    const key = getKbKeyVal(e.code);
     wasm.keyboard_keyUp(key);
   });
 }
