@@ -2,11 +2,8 @@ const std = @import("std");
 
 extern fn js_print(str_ptr: [*]const u8, str_len: u32) void;
 
-pub fn print(gpa: std.mem.Allocator, fmt: []const u8, args: anytype) void {
-    // TODO printing is expensive as SHIT
-    // consider replacing with a stack allocated bufPrint or heap
-    const str = std.fmt.allocPrint(gpa, fmt, args) catch return;
-    defer gpa.free(str);
+pub fn print(aa: std.mem.Allocator, comptime fmt: []const u8, args: anytype) void {
+    const str = std.fmt.allocPrint(aa, fmt, args) catch return;
     js_print(str.ptr, str.len);
 }
 
@@ -121,12 +118,27 @@ pub const MouseButton = enum(u8) {
 };
 
 pub const Keyboard = struct {
-    keys_down: [256]bool = [_]bool{false} ** 256,
-    keys_pressed: [256]bool = [_]bool{false} ** 256,
-    keys_released: [256]bool = [_]bool{false} ** 256,
+    keys_down: []bool,
+    keys_pressed: []bool,
+    keys_released: []bool,
 
     pub fn new() Keyboard {
-        return .{};
+        const allocator = std.heap.page_allocator;
+        // keyboard lifetime matches the programs lifetime so FUCK IT NO FREEING FUCK JS FUCK WEB APPS THIS WONT BE A PROBLEM
+        // ik there is a ram crysis and all but everyone has enough memory for 3x256 bytes like cmon
+        const keys_down = allocator.alloc(bool, 256) catch unreachable;
+        const keys_pressed = allocator.alloc(bool, 256) catch unreachable;
+        const keys_released = allocator.alloc(bool, 256) catch unreachable;
+
+        @memset(keys_down, false);
+        @memset(keys_pressed, false);
+        @memset(keys_released, false);
+
+        return .{
+            .keys_down = keys_down,
+            .keys_pressed = keys_pressed,
+            .keys_released = keys_released,
+        };
     }
 
     pub fn keyDown(self: *Keyboard, key: KeyCode) void {
@@ -154,8 +166,8 @@ pub const Keyboard = struct {
     }
 
     pub fn endFrame(self: *Keyboard) void {
-        @memset(&self.keys_pressed, false);
-        @memset(&self.keys_released, false);
+        @memset(self.keys_pressed, false);
+        @memset(self.keys_released, false);
     }
 };
 
