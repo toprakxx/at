@@ -1,8 +1,8 @@
 pub const Pixel = packed struct {
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8,
+    r: u8 = 0xff,
+    g: u8 = 0xff,
+    b: u8 = 0xff,
+    a: u8 = 0xff,
 
     pub fn fromRGB(rgb: u24) Pixel {
         return .{
@@ -16,3 +16,6 @@ pub const Pixel = packed struct {
         return @bitCast(@byteSwap(rgba));
     }
 };
+pub inline fn pixel(p: Pixel) Pixel {
+    return p;
+}

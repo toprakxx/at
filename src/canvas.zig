@@ -18,11 +18,4 @@ pub const Canvas = struct {
         const pixel = Pixel.fromRGB(self.bgColor);
         @memset(&self.buffer, pixel);
     }
-
-    // pub fn getHeight(self: *const Canvas) u32 {
-    //     return self.height;
-    // }
-    // pub fn getWidth(self: *const Canvas) u32 {
-    //     return self.width;
-    // }
 };

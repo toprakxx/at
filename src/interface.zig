@@ -11,6 +11,8 @@ const Keyboard = io.Keyboard;
 const KeyCode = io.KeyCode;
 var aAllocator: TA_Allocator = undefined;
 var interface_kb: Keyboard = undefined;
+const entity = @import("entity.zig");
+const ecs = @import("ecs.zig");
 
 var initialized: bool = false;
 
