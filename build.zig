@@ -65,6 +65,11 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+    const zmath = b.dependency("zmath", .{});
+    const ecs = b.dependency("entt", .{});
+
+    exe.root_module.addImport("zmath", zmath.module("root"));
+    exe.root_module.addImport("ecs", ecs.module("zig-ecs"));
 
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
