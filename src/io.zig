@@ -2,9 +2,15 @@ const std = @import("std");
 
 extern fn js_print(str_ptr: [*]const u8, str_len: u32) void;
 
-pub fn print(aa: std.mem.Allocator, comptime fmt: []const u8, args: anytype) void {
-    const str = std.fmt.allocPrint(aa, fmt, args) catch return;
-    js_print(str.ptr, str.len);
+pub fn print(gpa: std.mem.Allocator, comptime fmt: []const u8, args: anytype) void {
+    var buf: [256]u8 = undefined;
+    const str = std.fmt.bufPrint(&buf, fmt, args) catch {
+        const allocated_str = std.fmt.allocPrint(gpa, fmt, args) catch return;
+        defer gpa.free(allocated_str);
+        js_print(allocated_str.ptr, @intCast(allocated_str.len));
+        return; // Early return to avoid printing the stack buffer
+    };
+    js_print(str.ptr, @intCast(str.len));
 }
 
 pub const KeyCode = enum(u8) {
@@ -126,6 +132,7 @@ pub const Keyboard = struct {
         const allocator = std.heap.page_allocator;
         // keyboard lifetime matches the programs lifetime so FUCK IT NO FREEING FUCK JS FUCK WEB APPS THIS WONT BE A PROBLEM
         // ik there is a ram crysis and all but everyone has enough memory for 3x256 bytes like cmon
+        // TODO catch return instead
         const keys_down = allocator.alloc(bool, 256) catch unreachable;
         const keys_pressed = allocator.alloc(bool, 256) catch unreachable;
         const keys_released = allocator.alloc(bool, 256) catch unreachable;
