@@ -3,12 +3,12 @@ const std = @import("std");
 pub extern fn updateCanvas() void;
 
 pub const Canvas = struct {
-    width: i32 = 800, // classic c int for compat
-    height: i32 = 600,
+    width: usize = 800, // classic c int for compat
+    height: usize = 600,
     allocator: std.mem.Allocator,
     buffer: []Pixel = undefined,
     bgColor: u24 = 0x44_44_ff,
-    pub fn new(width: i32, height: i32, alloc: std.mem.Allocator) Canvas {
+    pub fn new(width: usize, height: usize, alloc: std.mem.Allocator) Canvas {
         return .{
             .width = width,
             .height = height,
@@ -16,20 +16,20 @@ pub const Canvas = struct {
         };
     }
     pub fn init(self: *Canvas) void {
-        self.buffer = self.allocator.alloc(Pixel, self.width * self.height) orelse unreachable; // FIXME handle bad alloc
+        self.buffer = self.allocator.alloc(Pixel, @bitCast(self.width * self.height)) catch unreachable; // FIXME handle bad alloc
     }
     pub fn deninit(self: *Canvas) void {
         self.allocator.free(self.buffer);
     }
     pub fn getBuffer(self: *Canvas) [*]u32 {
-        return @ptrCast(&self.buffer);
+        return @ptrCast(self.buffer.ptr);
     }
     pub fn clearBuffer(self: *Canvas) void {
         const pixel = Pixel.fromRGB(self.bgColor);
-        @memset(@as([self.width * self.height]i32, @ptrCast(self.buffer.ptr)), pixel);
+        @memset(self.buffer, pixel);
     }
     // TODO
-    pub inline fn drawPixel(self: *Canvas, x: i32, y: i32, pixel: *Pixel) void {
+    pub inline fn drawPixel(self: *Canvas, x: usize, y: usize, pixel: *Pixel) void {
         self.buffer[y * self.width + x] = pixel.*;
     }
 };
